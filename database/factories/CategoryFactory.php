@@ -17,7 +17,14 @@ class CategoryFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => $this->faker->word(),
+            'name' => $this->faker->unique()->words(
+                $this->faker->numberBetween(1, 3), 
+                true
+            ),
+            'description' => $this->faker->paragraphs(
+                $this->faker->numberBetween(1, 3),
+                true
+            ),
         ];
     }
 }

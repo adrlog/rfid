@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('products', function (Blueprint $table) {
             $table->id();
             $table->string('product_name');
-            $table->string('internal_reference')->unique();
+            $table->string('internal_reference')->nullable()->unique();
             $table->string('ean_gtin_code')->nullable();
             $table->string('rfid_code')->unique(); // RFID UID
             $table->string('product_picture')->nullable(); // URL or path
@@ -28,10 +28,10 @@ return new class extends Migration
             $table->string('creator_user')->nullable();
             
             // Foreign Keys
-            $table->foreignId('category_id')->constrained();
-            $table->foreignId('brand_id')->constrained();
-            $table->foreignId('supplier_id')->constrained();
-            $table->foreignId('warehouse_location_id')->constrained();
+            $table->foreignId('category_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('brand_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('cascade');
+            $table->foreignId('warehouse_location_id')->nullable()->constrained()->onDelete('cascade');
             $table->timestamps();
         });
     }

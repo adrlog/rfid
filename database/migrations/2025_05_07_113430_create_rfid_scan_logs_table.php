@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('rfid_scan_logs', function (Blueprint $table) {
             $table->id();
             $table->string('rfid_code'); // Scanned RFID UID
-            $table->foreignId('product_id')->nullable()->constrained(); // Linked product (if exists)
+            $table->foreignId('product_id')->nullable()->constrained()->onDelete('cascade'); // Linked product (if exists)
             $table->string('scan_type'); // e.g., "check-in", "check-out", "inventory"
             $table->string('scanned_by');
             $table->timestamps();

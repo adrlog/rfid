@@ -1,0 +1,2 @@
+CRON JOb 
+/opt/cpanel/ea-php82/root/usr/bin/php /home/elsazon/public_html/rfid/artisan queue:work --stop-when-empty --tries=3 --timeout=60
