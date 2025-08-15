@@ -19,7 +19,7 @@ class DatabaseSeeder extends Seeder
             BrandSeeder::class,
             SupplierSeeder::class,
             WarehouseLocationSeeder::class,
-            CategorySeeder::class,
+            // CategorySeeder::class,
             RfidScanLogSeeder::class,
         ]);
     }

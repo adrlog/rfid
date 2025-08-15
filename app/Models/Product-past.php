@@ -11,53 +11,37 @@ class Product extends Model
 {
     use HasFactory;
 
-    /**
-     * The attributes that are mass assignable.
-     */
     protected $fillable = [
-        'name',
-        'sku',
-        'origen_price',
-        'transporte',
-        'cost_price',
-        'minimum_price',
-        'regular_price',
-        'beneficio_web',
-        'beneficio_glovo',
-        'type',
-        'published',
-        'visibility_in_catalog',
-        'description',
-        'meta_title',
-        'meta_description',
-        'categories',
-        'supercategories',
-        'images',
-        'stock',
-        'gtin',
-        'collection',
-        'variant_attribute_1',
-        'color',
-        'marca',
-        'item_size',
-        'publico_objetivo',
-        'funciones',
-        'proveedor',
-        'condicion',
-        'informacion_adicional',
+        'product_name',
+        'internal_reference',
+        'ean_gtin_code',
         'rfid_code',
         'product_picture',
+        'brief_description',
+        'current_stock',
+        'product_condition',
+        'cost_price',
+        'sale_price',
+        'date_of_discharge',
+        'last_updated_date',
+        'creator_user',
+        'category_id',
         'brand_id',
         'supplier_id',
         'warehouse_location_id',
     ];
 
-    /**
-     * The attributes that should be cast to native types.
-     */
     protected $casts = [
-        'published' => 'boolean',
+        'date_of_discharge' => 'datetime',
+        'last_updated_date' => 'datetime',
+        'cost_price' => 'decimal:2',
+        'sale_price' => 'decimal:2',
     ];
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(Category::class);
+    }
 
     public function brand(): BelongsTo
     {

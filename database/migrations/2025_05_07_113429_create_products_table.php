@@ -13,25 +13,64 @@ return new class extends Migration
     {
         Schema::create('products', function (Blueprint $table) {
             $table->id();
-            $table->string('product_name');
-            $table->string('internal_reference')->nullable()->unique();
-            $table->string('ean_gtin_code')->nullable();
-            $table->string('rfid_code')->unique(); // RFID UID
+
+            // Basic info
+            $table->string('name')->nullable();
+            $table->string('sku')->nullable();
+
+            // Prices
+            $table->string('origen_price')->nullable();
+            $table->string('transporte')->nullable();
+            $table->string('cost_price')->nullable();
+            $table->string('minimum_price')->nullable();
+            $table->string('regular_price')->nullable();
+            $table->string('beneficio_web')->nullable();
+            $table->string('beneficio_glovo')->nullable();
+
+            // Type & status
+            $table->string('type')->nullable();
+            $table->boolean('published')->default(true);
+            $table->string('visibility_in_catalog')->nullable();
+
+            // Descriptions & SEO
+            $table->text('description')->nullable();
+            $table->string('meta_title')->nullable();
+            $table->string('meta_description')->nullable();
+
+            // Categories (kept as raw text for now)
+            $table->string('categories')->nullable();
+            $table->string('supercategories')->nullable();
+
+            // Media & stock
+            $table->string('images')->nullable();
+            $table->string('stock')->default('0');
+
+            // Identifiers
+            $table->string('gtin')->nullable();
+            $table->string('collection')->nullable();
+            $table->string('variant_attribute_1')->nullable();
+            $table->string('color')->nullable();
+
+            // Brand, size, target audience
+            $table->string('marca')->nullable();
+            $table->string('item_size')->nullable();
+            $table->string('publico_objetivo')->nullable();
+
+            // Features & supplier
+            $table->string('funciones')->nullable();
+            $table->string('proveedor')->nullable();
+
+            // Condition & extra info
+            $table->string('condicion')->nullable();
+            $table->text('informacion_adicional')->nullable();
+
+            $table->string('rfid_code')->nullable(); // RFID UID
             $table->string('product_picture')->nullable(); // URL or path
-            $table->text('brief_description')->nullable();
-            $table->integer('current_stock')->default(0);
-            $table->string('product_condition')->default('New');
-            $table->decimal('cost_price', 10, 2)->nullable();
-            $table->decimal('sale_price', 10, 2)->nullable();
-            $table->datetime('date_of_discharge')->nullable();
-            $table->datetime('last_updated_date')->nullable();
-            $table->string('creator_user')->nullable();
-            
-            // Foreign Keys
-            $table->foreignId('category_id')->nullable()->constrained()->onDelete('cascade');
-            $table->foreignId('brand_id')->nullable()->constrained()->onDelete('cascade');
-            $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('cascade');
-            $table->foreignId('warehouse_location_id')->nullable()->constrained()->onDelete('cascade');
+
+            $table->foreignId('brand_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('supplier_id')->nullable()->constrained()->onDelete('set null');
+            $table->foreignId('warehouse_location_id')->nullable()->constrained()->onDelete('set null');
+
             $table->timestamps();
         });
     }
