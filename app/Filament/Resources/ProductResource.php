@@ -101,8 +101,12 @@ class ProductResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\ImageColumn::make('product_picture')
-                    ->size(40)
-                    ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name='.urlencode($record->product_name).'&color=FFFFFF&background=111827')
+                    ->getStateUsing(fn ($record) => 
+                        $record->product_picture
+                            ? asset('storage/' . $record->product_picture)
+                            : 'https://ui-avatars.com/api/?name=' . urlencode($record->product_name) . '&color=FFFFFF&background=111827'
+                    )
+
                     ->circular(),
 
                 Tables\Columns\TextColumn::make('product_name')
