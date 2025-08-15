@@ -14,78 +14,66 @@ class ProductImporter extends Importer
     public static function getColumns(): array
     {
         return [
-            ImportColumn::make('product_name')
-                ->requiredMapping()
-                ->rules(['required', 'max:255']),
-            ImportColumn::make('internal_reference')
-                ->requiredMapping()
+            ImportColumn::make('name')
                 ->rules(['max:255']),
-            ImportColumn::make('ean_gtin_code')
+            ImportColumn::make('sku')
+                ->label('SKU')
                 ->rules(['max:255']),
-            ImportColumn::make('rfid_code')
-                ->requiredMapping()
-                ->rules(['required', 'max:255']),
-            ImportColumn::make('product_picture')
+            ImportColumn::make('origen_price'),
+            ImportColumn::make('transporte'),
+            ImportColumn::make('cost_price'),
+            ImportColumn::make('minimum_price'),
+            ImportColumn::make('regular_price'),
+            ImportColumn::make('beneficio_web'),
+            ImportColumn::make('beneficio_glovo'),
+            ImportColumn::make('type')
                 ->rules(['max:255']),
-            ImportColumn::make('brief_description'),
-            ImportColumn::make('current_stock')
-                ->requiredMapping()
-                ->numeric()
-                ->rules(['required', 'integer']),
-            ImportColumn::make('product_condition')
-                ->requiredMapping()
-                ->rules(['required', 'max:255']),
-            ImportColumn::make('cost_price')
-                ->numeric()
-                ->rules(['nullable', 'numeric', 'decimal:0,2'])
-                ->castStateUsing(function ($state) {
-                    return $state !== null ? round((float) $state, 2) : null;
-                }),
-
-            ImportColumn::make('sale_price')
-                ->numeric()
-                ->rules(['nullable', 'numeric', 'decimal:0,2'])
-                ->castStateUsing(function ($state) {
-                    return $state !== null ? round((float) $state, 2) : null;
-                }),
-            ImportColumn::make('date_of_discharge')
-                ->rules(['datetime']),
-            ImportColumn::make('last_updated_date')
-                ->rules(['datetime']),
-            ImportColumn::make('creator_user')
+            ImportColumn::make('published')
+                ->boolean(),
+            ImportColumn::make('visibility_in_catalog')
                 ->rules(['max:255']),
-            ImportColumn::make('category')
-                ->requiredMapping()
-                ->relationship(),
-            ImportColumn::make('brand')
-                ->requiredMapping()
-                ->relationship(),
-            ImportColumn::make('supplier')
-                ->requiredMapping()
-                ->relationship(),
-            ImportColumn::make('warehouseLocation')
-                ->requiredMapping()
-                ->relationship(),
+            ImportColumn::make('description'),
+            ImportColumn::make('meta_title')
+                ->rules(['max:255']),
+            ImportColumn::make('meta_description')
+                ->rules(['max:255']),
+            ImportColumn::make('categories')
+                ->rules(['max:255']),
+            ImportColumn::make('supercategories')
+                ->rules(['max:255']),
+            ImportColumn::make('images')
+                ->rules(['max:255']),
+            ImportColumn::make('stock'),
+            ImportColumn::make('gtin')
+                ->rules(['max:255']),
+            ImportColumn::make('collection')
+                ->rules(['max:255']),
+            ImportColumn::make('variant_attribute_1')
+                ->rules(['max:255']),
+            ImportColumn::make('color')
+                ->rules(['max:255']),
+            ImportColumn::make('marca')
+                ->rules(['max:255']),
+            ImportColumn::make('item_size')
+                ->rules(['max:255']),
+            ImportColumn::make('publico_objetivo')
+                ->rules(['max:255']),
+            ImportColumn::make('funciones')
+                ->rules(['max:255']),
+            ImportColumn::make('proveedor')
+                ->rules(['max:255']),
+            ImportColumn::make('condicion')
+                ->rules(['max:255']),
+            ImportColumn::make('informacion_adicional'),
         ];
     }
 
     public function resolveRecord(): ?Product
     {
-        // Try to find existing product by RFID first
-        if (!empty($this->data['rfid_code'])) {
-            $existing = Product::where('rfid_code', $this->data['rfid_code'])->first();
-            if ($existing) {
-                return $existing;
-            }
-        }
-        
-        // Then try by internal reference if RFID not found
-        if (!empty($this->data['internal_reference'])) {
-            $existing = Product::where('internal_reference', $this->data['internal_reference'])->first();
-            if ($existing) {
-                return $existing;
-            }
-        }
+        // return Product::firstOrNew([
+        //     // Update existing records, matching them by `$this->data['column_name']`
+        //     'email' => $this->data['email'],
+        // ]);
 
         return new Product();
     }

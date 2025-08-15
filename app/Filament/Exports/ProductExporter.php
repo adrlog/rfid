@@ -14,25 +14,39 @@ class ProductExporter extends Exporter
     public static function getColumns(): array
     {
         return [
-            ExportColumn::make('id')
-                ->label('ID'),
-            ExportColumn::make('product_name'),
-            ExportColumn::make('internal_reference'),
-            ExportColumn::make('ean_gtin_code'),
-            ExportColumn::make('rfid_code'),
-            ExportColumn::make('product_picture'),
-            ExportColumn::make('brief_description'),
-            ExportColumn::make('current_stock'),
-            ExportColumn::make('product_condition'),
-            ExportColumn::make('cost_price')
-                ->formatStateUsing(fn (string $state): string => number_format($state, 2, '.', '')),
-            ExportColumn::make('sale_price')
-                ->formatStateUsing(fn (string $state): string => number_format($state, 2, '.', '')),
-            ExportColumn::make('creator_user'),
-            ExportColumn::make('category.id'),
-            ExportColumn::make('brand.id'),
-            ExportColumn::make('supplier.id'),
-            ExportColumn::make('warehouseLocation.id'),
+            ExportColumn::make('name'),
+            ExportColumn::make('sku')
+                ->label('SKU'),
+            ExportColumn::make('origen_price'),
+            ExportColumn::make('transporte'),
+            ExportColumn::make('cost_price'),
+            ExportColumn::make('minimum_price'),
+            ExportColumn::make('regular_price'),
+            ExportColumn::make('beneficio_web'),
+            ExportColumn::make('beneficio_glovo'),
+            ExportColumn::make('type'),
+            ExportColumn::make('published'),
+            ExportColumn::make('visibility_in_catalog'),
+            ExportColumn::make('description'),
+            ExportColumn::make('meta_title'),
+            ExportColumn::make('meta_description'),
+            ExportColumn::make('categories'),
+            ExportColumn::make('supercategories'),
+            ExportColumn::make('images'),
+            ExportColumn::make('stock'),
+            ExportColumn::make('gtin'),
+            ExportColumn::make('collection'),
+            ExportColumn::make('variant_attribute_1'),
+            ExportColumn::make('color'),
+            ExportColumn::make('marca'),
+            ExportColumn::make('item_size'),
+            ExportColumn::make('publico_objetivo'),
+            ExportColumn::make('funciones'),
+            ExportColumn::make('proveedor'),
+            ExportColumn::make('condicion'),
+            ExportColumn::make('informacion_adicional'),
+            ExportColumn::make('created_at'),
+            ExportColumn::make('updated_at'),
         ];
     }
 
