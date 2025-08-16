@@ -19,17 +19,26 @@ class ProductImporter extends Importer
             ImportColumn::make('sku')
                 ->label('SKU')
                 ->rules(['max:255']),
-            ImportColumn::make('origen_price'),
-            ImportColumn::make('transporte'),
-            ImportColumn::make('cost_price'),
-            ImportColumn::make('minimum_price'),
-            ImportColumn::make('regular_price'),
-            ImportColumn::make('beneficio_web'),
-            ImportColumn::make('beneficio_glovo'),
+            ImportColumn::make('origen_price')
+                ->rules(['max:255']),
+            ImportColumn::make('transporte')
+                ->rules(['max:255']),
+            ImportColumn::make('cost_price')
+                ->rules(['max:255']),
+            ImportColumn::make('minimum_price')
+                ->rules(['max:255']),
+            ImportColumn::make('regular_price')
+                ->rules(['max:255']),
+            ImportColumn::make('beneficio_web')
+                ->rules(['max:255']),
+            ImportColumn::make('beneficio_glovo')
+                ->rules(['max:255']),
             ImportColumn::make('type')
                 ->rules(['max:255']),
             ImportColumn::make('published')
-                ->boolean(),
+                ->requiredMapping()
+                ->boolean()
+                ->rules(['required', 'boolean']),
             ImportColumn::make('visibility_in_catalog')
                 ->rules(['max:255']),
             ImportColumn::make('description'),
@@ -41,9 +50,10 @@ class ProductImporter extends Importer
                 ->rules(['max:255']),
             ImportColumn::make('supercategories')
                 ->rules(['max:255']),
-            ImportColumn::make('images')
-                ->rules(['max:255']),
-            ImportColumn::make('stock'),
+            ImportColumn::make('images'),
+            ImportColumn::make('stock')
+                ->requiredMapping()
+                ->rules(['required', 'max:255']),
             ImportColumn::make('gtin')
                 ->rules(['max:255']),
             ImportColumn::make('collection')

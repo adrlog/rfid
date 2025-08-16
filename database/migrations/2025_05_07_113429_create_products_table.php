@@ -42,7 +42,7 @@ return new class extends Migration
             $table->string('supercategories')->nullable();
 
             // Media & stock
-            $table->string('images')->nullable();
+            $table->text('images')->nullable();
             $table->string('stock')->default('0');
 
             // Identifiers

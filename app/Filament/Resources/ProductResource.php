@@ -134,6 +134,9 @@ class ProductResource extends Resource
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('sku')->searchable()->sortable()->toggleable(),
                 
+                Tables\Columns\TextColumn::make('categories')->badge()->toggleable(),
+                Tables\Columns\TextColumn::make('supercategories')->badge()->toggleable(),
+                
                 Tables\Columns\TextColumn::make('origen_price')->money()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('transporte')->money()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('cost_price')->money()->sortable()->toggleable(),
@@ -150,8 +153,6 @@ class ProductResource extends Resource
                 Tables\Columns\TextColumn::make('meta_title')->toggleable(),
                 Tables\Columns\TextColumn::make('meta_description')->toggleable(),
 
-                Tables\Columns\TextColumn::make('categories')->badge()->toggleable(),
-                Tables\Columns\TextColumn::make('supercategories')->badge()->toggleable(),
 
                 Tables\Columns\TextColumn::make('images')->toggleable(),
                 Tables\Columns\TextColumn::make('stock')
