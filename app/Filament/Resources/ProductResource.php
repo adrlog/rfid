@@ -656,15 +656,28 @@ class ProductResource extends Resource
                             ->formatStateUsing(function ($state) {
                                 if (empty($state)) return 'No additional images';
                                 
-                                $images = is_array($state) ? $state : json_decode($state, true);
+                                // Handle both JSON arrays and comma-separated strings
+                                if (is_array($state)) {
+                                    $images = $state;
+                                } else {
+                                    // Try to decode as JSON first
+                                    $decoded = json_decode($state, true);
+                                    if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                                        $images = $decoded;
+                                    } else {
+                                        // If not JSON, treat as comma-separated string
+                                        $images = array_map('trim', explode(',', $state));
+                                    }
+                                }
+                                
                                 if (empty($images)) return 'No additional images';
                                 
-                                $html = '<div class="grid grid-cols-4 gap-2 mt-2">';
+                                $html = '<div class="flex overflow-y-hidden flex-wrap gap-2">';
                                 foreach ($images as $image) {
                                     $imageUrl = filter_var($image, FILTER_VALIDATE_URL) 
                                         ? $image 
                                         : (\Storage::url($image) ?? $image);
-                                    $html .= '<img src="' . $imageUrl . '" class="w-full h-20 object-cover rounded border" onerror="this.style.display=\'none\'">';
+                                    $html .= '<img src="' . $imageUrl . '" class="w-20 h-auto object-cover rounded border" onerror="this.style.display=\'none\'">';
                                 }
                                 $html .= '</div>';
                                 
