@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Storage;
 
 class Product extends Model
 {
@@ -77,5 +78,129 @@ class Product extends Model
     public function rfidScans(): HasMany
     {
         return $this->hasMany(RfidScanLog::class, 'rfid_code', 'rfid_code');
+    }
+
+    /**
+     * The "booted" method of the model.
+     */
+    protected static function booted(): void
+    {
+        static::saving(function (Product $product) {
+            // Handle main image upload
+            if (request()->hasFile('product_picture_upload')) {
+                // Delete old image if exists and it's a file (not URL)
+                if ($product->product_picture && !filter_var($product->product_picture, FILTER_VALIDATE_URL)) {
+                    Storage::delete($product->product_picture);
+                }
+                
+                $path = request()->file('product_picture_upload')->store('products', 'public');
+                $product->product_picture = $path;
+            }
+            
+            // Handle additional images upload
+            if (request()->hasFile('images_upload')) {
+                $uploadedImages = [];
+                
+                // Process new uploads
+                foreach (request()->file('images_upload') as $file) {
+                    $path = $file->store('products/gallery', 'public');
+                    $uploadedImages[] = $path;
+                }
+                
+                // Merge with existing images if any
+                $existingImages = [];
+                if ($product->images) {
+                    $existingImages = is_array($product->images) 
+                        ? $product->images 
+                        : json_decode($product->images, true) ?? [];
+                }
+                
+                $product->images = json_encode(array_merge($existingImages, $uploadedImages));
+            }
+            
+            // Handle textarea URLs for additional images
+            if (request()->filled('images')) {
+                $urls = array_filter(
+                    array_map('trim', explode("\n", request()->input('images'))),
+                    function($url) {
+                        return filter_var($url, FILTER_VALIDATE_URL);
+                    }
+                );
+                
+                // If we have URLs from textarea, use them instead of uploaded files
+                if (!empty($urls)) {
+                    $product->images = json_encode($urls);
+                }
+            }
+        });
+        
+        static::deleting(function (Product $product) {
+            // Delete uploaded files when product is deleted
+            if ($product->product_picture && !filter_var($product->product_picture, FILTER_VALIDATE_URL)) {
+                Storage::delete($product->product_picture);
+            }
+            
+            if ($product->images) {
+                $images = is_array($product->images) 
+                    ? $product->images 
+                    : json_decode($product->images, true) ?? [];
+                
+                foreach ($images as $image) {
+                    if (!filter_var($image, FILTER_VALIDATE_URL)) {
+                        Storage::delete($image);
+                    }
+                }
+            }
+        });
+    }
+    
+    /**
+     * Accessor for images attribute
+     */
+    public function getImagesArrayAttribute(): array
+    {
+        if (empty($this->images)) {
+            return [];
+        }
+        
+        if (is_array($this->images)) {
+            return $this->images;
+        }
+        
+        return json_decode($this->images, true) ?? [];
+    }
+    
+    /**
+     * Accessor for getting all image URLs (handles both stored files and external URLs)
+     */
+    public function getImageUrlsAttribute(): array
+    {
+        $urls = [];
+        
+        foreach ($this->images_array as $image) {
+            if (filter_var($image, FILTER_VALIDATE_URL)) {
+                $urls[] = $image;
+            } else {
+                $urls[] = Storage::url($image);
+            }
+        }
+        
+        return $urls;
+    }
+    
+    /**
+     * Accessor for getting the main image URL
+     */
+    public function getMainImageUrlAttribute(): string
+    {
+        if (filter_var($this->product_picture, FILTER_VALIDATE_URL)) {
+            return $this->product_picture;
+        }
+        
+        if ($this->product_picture) {
+            return Storage::url($this->product_picture);
+        }
+        
+        return 'https://ui-avatars.com/api/?name='.urlencode($this->name).'&color=FFFFFF&background=111827';
     }
 }

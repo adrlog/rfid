@@ -14,6 +14,8 @@ use Filament\Infolists\Infolist;
 use Illuminate\Database\Eloquent\Builder;
 use App\Filament\Exports\ProductExporter;
 use App\Filament\Imports\ProductImporter;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Storage;
 
 class ProductResource extends Resource
 {
@@ -26,104 +28,273 @@ class ProductResource extends Resource
     {
         return $form
             ->schema([
-                Forms\Components\Grid::make(3)
-                    ->schema([
-                        Forms\Components\Section::make('Basic Info')
-                            ->columnSpan(2)
+                Forms\Components\Tabs::make('Product Details')
+                    ->tabs([
+                        Forms\Components\Tabs\Tab::make('Basic Information')
                             ->schema([
                                 Forms\Components\TextInput::make('name')
                                     ->required()
-                                    ->maxLength(255),
+                                    ->maxLength(255)
+                                    ->columnSpanFull(),
+                                    
                                 Forms\Components\TextInput::make('sku')
-                                    ->maxLength(255)
-                                    ->unique(ignoreRecord: true),
-                                Forms\Components\TextInput::make('rfid_code')
-                                    ->label('RFID Tag')
-                                    ->maxLength(255)
+                                    ->label('SKU')
                                     ->unique(ignoreRecord: true)
-                                    ->hint('Scan RFID tag to auto-fill'),
+                                    ->maxLength(255)
+                                    ->required(),
+                                    
+                                Forms\Components\Textarea::make('description')
+                                    ->columnSpanFull(),
+                                    
                                 Forms\Components\Select::make('type')
                                     ->options([
                                         'simple' => 'Simple',
                                         'variable' => 'Variable',
-                                        'bundle' => 'Bundle',
-                                    ]),
+                                        'grouped' => 'Grouped',
+                                        'external' => 'External',
+                                    ])
+                                    ->default('simple'),
+                                    
                                 Forms\Components\Toggle::make('published')
-                                    ->label('Published')
-                                    ->default(true),
-                                Forms\Components\TextInput::make('visibility_in_catalog')
-                                    ->maxLength(255),
-                            ]),
-                        Forms\Components\Section::make('Media')
-                            ->columnSpan(1)
+                                    ->default(true)
+                                    ->inline(false),
+                                    
+                                Forms\Components\Select::make('visibility_in_catalog')
+                                    ->options([
+                                        'visible' => 'Visible',
+                                        'catalog' => 'Catalog Only',
+                                        'search' => 'Search Only',
+                                        'hidden' => 'Hidden',
+                                    ])
+                                    ->default('visible'),
+                            ])->columns(2),
+                            
+                        Forms\Components\Tabs\Tab::make('Pricing')
                             ->schema([
-                                Forms\Components\FileUpload::make('product_picture')
-                                    ->directory('products')
-                                    ->disk('public')
-                                    ->image()
-                                    ->imageEditor(),
+                                Forms\Components\TextInput::make('origen_price')
+                                    ->label('Origin Price')
+                                    ->numeric()
+                                    ->prefix('€'),
+                                    
+                                Forms\Components\TextInput::make('transporte')
+                                    ->label('Transport Cost')
+                                    ->numeric()
+                                    ->prefix('€'),
+                                    
+                                Forms\Components\TextInput::make('cost_price')
+                                    ->label('Cost Price')
+                                    ->numeric()
+                                    ->prefix('€'),
+                                    
+                                Forms\Components\TextInput::make('minimum_price')
+                                    ->label('Minimum Price')
+                                    ->numeric()
+                                    ->prefix('€'),
+                                    
+                                Forms\Components\TextInput::make('regular_price')
+                                    ->label('Regular Price')
+                                    ->numeric()
+                                    ->prefix('€'),
+                                    
+                                Forms\Components\TextInput::make('beneficio_web')
+                                    ->label('Web Profit')
+                                    ->numeric()
+                                    ->prefix('€'),
+                                    
+                                Forms\Components\TextInput::make('beneficio_glovo')
+                                    ->label('Glovo Profit')
+                                    ->numeric()
+                                    ->prefix('€'),
+                            ])->columns(2),
+                            
+                        Forms\Components\Tabs\Tab::make('Inventory & Shipping')
+                            ->schema([
+                                Forms\Components\TextInput::make('stock')
+                                    ->numeric()
+                                    ->default(0),
+                                    
+                                Forms\Components\Select::make('warehouse_location_id')
+                                    ->relationship('warehouseLocation', 'aisle')
+                                    ->searchable()
+                                    ->preload(),
+                                    
+                                Forms\Components\TextInput::make('item_size')
+                                    ->label('Size'),
+                                    
+                                Forms\Components\TextInput::make('gtin')
+                                    ->label('GTIN (Barcode)'),
+                            ])->columns(2),
+                            
+                        Forms\Components\Tabs\Tab::make('Categories & Attributes')
+                            ->schema([
+                                Forms\Components\TextInput::make('categories')
+                                    ->columnSpanFull(),
+                                    
+                                Forms\Components\TextInput::make('supercategories')
+                                    ->label('Super Categories')
+                                    ->columnSpanFull(),
+                                    
+                                Forms\Components\Select::make('brand_id')
+                                    ->relationship('brand', 'name')
+                                    ->searchable()
+                                    ->preload()
+                                    ->createOptionForm([
+                                        Forms\Components\TextInput::make('name')
+                                            ->required(),
+                                    ]),
+                                    
+                                Forms\Components\Select::make('collection')
+                                    ->options([
+                                        'spring' => 'Spring',
+                                        'summer' => 'Summer',
+                                        'fall' => 'Fall',
+                                        'winter' => 'Winter',
+                                    ]),
+                                    
+                                Forms\Components\TextInput::make('color'),
+                                
+                                Forms\Components\TextInput::make('variant_attribute_1')
+                                    ->label('Variant Attribute'),
+                                    
+                                Forms\Components\TextInput::make('publico_objetivo')
+                                    ->label('Target Audience'),
+                            ])->columns(2),
+                            
+                        Forms\Components\Tabs\Tab::make('Media')
+                            ->schema([
+                                // Main Image - URL or Upload with PREVIEW
+                                Forms\Components\Group::make([
+                                    Forms\Components\TextInput::make('product_picture')
+                                        ->label('Main Image URL')
+                                        ->url()
+                                        ->columnSpanFull()
+                                        ->helperText('Enter a URL for the main product image')
+                                        ->live(debounce: 500)
+                                        ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                            if (filter_var($state, FILTER_VALIDATE_URL)) {
+                                                $set('_main_image_preview', $state);
+                                            } else {
+                                                $set('_main_image_preview', null);
+                                            }
+                                        }),
+                                        
+                                    Forms\Components\FileUpload::make('product_picture_upload')
+                                        ->label('Or Upload Main Image')
+                                        ->image()
+                                        ->directory('products')
+                                        ->visibility('public')
+                                        ->preserveFilenames()
+                                        ->maxSize(2048)
+                                        ->columnSpanFull()
+                                        ->dehydrated(false)
+                                        ->live()
+                                        ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                            if ($state) {
+                                                $set('_main_image_preview', $state->temporaryUrl());
+                                            } else {
+                                                $set('_main_image_preview', null);
+                                            }
+                                        }),
+                                    
+                                    // ADD THIS PREVIEW COMPONENT
+                                    Forms\Components\ViewField::make('_main_image_preview')
+                                        ->view('filament.forms.components.image-preview')
+                                        ->label('Main Image Preview')
+                                        ->columnSpanFull(),
+                                ]),
+                                
+                                // Additional Images - URLs or Uploads with PREVIEW
+                                Forms\Components\Group::make([
+                                    Forms\Components\Textarea::make('images')
+                                        ->label('Additional Image URLs (one per line)')
+                                        ->helperText('Enter one URL per line for additional product images')
+                                        ->columnSpanFull()
+                                        ->live(debounce: 500)
+                                        ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                            $urls = array_filter(
+                                                array_map('trim', explode("\n", $state)),
+                                                function($url) {
+                                                    return filter_var($url, FILTER_VALIDATE_URL);
+                                                }
+                                            );
+                                            $set('_additional_images_preview', $urls);
+                                        }),
+                                        
+                                    Forms\Components\FileUpload::make('images_upload')
+                                        ->label('Or Upload Additional Images')
+                                        ->multiple()
+                                        ->image()
+                                        ->directory('products/gallery')
+                                        ->visibility('public')
+                                        ->preserveFilenames()
+                                        ->maxSize(2048)
+                                        ->columnSpanFull()
+                                        ->dehydrated(false)
+                                        ->live()
+                                        ->afterStateUpdated(function ($state, Forms\Set $set) {
+                                            $previews = [];
+                                            if ($state) {
+                                                foreach ($state as $file) {
+                                                    $previews[] = $file->temporaryUrl();
+                                                }
+                                            }
+                                            $set('_additional_images_preview', $previews);
+                                        }),
+                                    
+                                    // ADD THIS PREVIEW COMPONENT
+                                    Forms\Components\ViewField::make('_additional_images_preview')
+                                        ->view('filament.forms.components.multi-image-preview')
+                                        ->label('Additional Images Preview')
+                                        ->columnSpanFull(),
+                                ]),
                             ]),
-                    ]),
-
-                Forms\Components\Section::make('Pricing')
-                    ->columns(3)
-                    ->schema([
-                        Forms\Components\TextInput::make('origen_price')->numeric()->prefix('$'),
-                        Forms\Components\TextInput::make('transporte')->numeric()->prefix('$'),
-                        Forms\Components\TextInput::make('cost_price')->numeric()->prefix('$'),
-                        Forms\Components\TextInput::make('minimum_price')->numeric()->prefix('$'),
-                        Forms\Components\TextInput::make('regular_price')->numeric()->prefix('$'),
-                        Forms\Components\TextInput::make('beneficio_web')->numeric()->prefix('$'),
-                        Forms\Components\TextInput::make('beneficio_glovo')->numeric()->prefix('$'),
-                    ]),
-
-                Forms\Components\Section::make('Stock & Warehouse')
-                    ->columns(3)
-                    ->schema([
-                        Forms\Components\TextInput::make('stock')->numeric()->default(0),
-                        Forms\Components\Select::make('warehouse_location_id')
-                            ->relationship('warehouseLocation', 'aisle'),
-                    ]),
-
-                Forms\Components\Section::make('Associations')
-                    ->columns(3)
-                    ->schema([
-                        Forms\Components\Select::make('brand_id')
-                            ->relationship('brand', 'name'),
-                        Forms\Components\Select::make('supplier_id')
-                            ->relationship('supplier', 'name'),
-                    ]),
-
-                Forms\Components\Section::make('Identifiers & Attributes')
-                    ->columns(3)
-                    ->schema([
-                        Forms\Components\TextInput::make('gtin'),
-                        Forms\Components\TextInput::make('collection'),
-                        Forms\Components\TextInput::make('variant_attribute_1'),
-                        Forms\Components\TextInput::make('color'),
-                        Forms\Components\TextInput::make('marca'),
-                        Forms\Components\TextInput::make('item_size'),
-                        Forms\Components\TextInput::make('publico_objetivo'),
-                        Forms\Components\TextInput::make('funciones'),
-                        Forms\Components\TextInput::make('proveedor'),
-                        Forms\Components\Select::make('condicion')->options([
-                            'New' => 'New',
-                            'Used' => 'Used',
-                            'Refurbished' => 'Refurbished',
-                            'Damaged' => 'Damaged'
-                        ]),
-                    ]),
-
-                Forms\Components\Section::make('Descriptions & SEO')
-                    ->columns(2)
-                    ->schema([
-                        Forms\Components\Textarea::make('description')->rows(4),
-                        Forms\Components\TextInput::make('meta_title'),
-                        Forms\Components\TextInput::make('meta_description'),
-                        Forms\Components\TextInput::make('categories'),
-                        Forms\Components\TextInput::make('supercategories'),
-                        Forms\Components\Textarea::make('informacion_adicional')->rows(3),
-                    ]),
+                            
+                        Forms\Components\Tabs\Tab::make('SEO')
+                            ->schema([
+                                Forms\Components\TextInput::make('meta_title')
+                                    ->columnSpanFull(),
+                                    
+                                Forms\Components\Textarea::make('meta_description')
+                                    ->columnSpanFull(),
+                            ]),
+                            
+                        Forms\Components\Tabs\Tab::make('Advanced')
+                            ->schema([
+                                Forms\Components\TextInput::make('rfid_code')
+                                    ->label('RFID Code'),
+                                    
+                                Forms\Components\Select::make('supplier_id')
+                                    ->relationship('supplier', 'name')
+                                    ->searchable()
+                                    ->preload()
+                                    ->createOptionForm([
+                                        Forms\Components\TextInput::make('name')
+                                            ->required(),
+                                        Forms\Components\TextInput::make('contact_email'),
+                                    ]),
+                                    
+                                Forms\Components\TextInput::make('marca')
+                                    ->label('Brand (Legacy)'),
+                                    
+                                Forms\Components\TextInput::make('proveedor')
+                                    ->label('Supplier (Legacy)'),
+                                    
+                                Forms\Components\Textarea::make('funciones')
+                                    ->label('Features'),
+                                    
+                                Forms\Components\Select::make('condicion')
+                                    ->label('Condition')
+                                    ->options([
+                                        'new' => 'New',
+                                        'used' => 'Used',
+                                        'refurbished' => 'Refurbished',
+                                    ]),
+                                    
+                                Forms\Components\Textarea::make('informacion_adicional')
+                                    ->label('Additional Information')
+                                    ->columnSpanFull(),
+                            ])->columns(2),
+                    ])->columnSpanFull(),
             ]);
     }
 
@@ -230,8 +401,9 @@ class ProductResource extends Resource
                 Tables\Filters\SelectFilter::make('warehouse_location_id')->relationship('warehouseLocation', 'aisle'),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\ViewAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
@@ -249,24 +421,142 @@ class ProductResource extends Resource
     {
         return $infolist
             ->schema([
+                // Main Image
                 Infolists\Components\ImageEntry::make('product_picture')
                     ->hiddenLabel()
                     ->defaultImageUrl(fn ($record) => 'https://ui-avatars.com/api/?name=' . urlencode($record->name))
                     ->columnSpanFull()
-                    ->alignment('center'),
-
-                Infolists\Components\Section::make('Details')
+                    ->alignment('center')
+                    ->extraImgAttributes(['class' => 'max-h-64 mx-auto']),
+                
+                // Basic Information Section
+                Infolists\Components\Section::make('Basic Information')
                     ->columns(3)
                     ->schema([
-                        Infolists\Components\TextEntry::make('name'),
-                        Infolists\Components\TextEntry::make('sku'),
-                        Infolists\Components\TextEntry::make('rfid_code')->badge()->color('primary'),
-                        Infolists\Components\TextEntry::make('stock')->badge()
-                            ->color(fn (int $state) => $state < 5 ? 'danger' : 'success'),
-                        Infolists\Components\TextEntry::make('regular_price')->money(),
+                        Infolists\Components\TextEntry::make('name')->label('Product Name'),
+                        Infolists\Components\TextEntry::make('sku')->label('SKU'),
+                        Infolists\Components\TextEntry::make('type')->badge()
+                            ->color(fn (string $state): string => match ($state) {
+                                'simple' => 'success',
+                                'variable' => 'warning',
+                                'grouped' => 'info',
+                                'external' => 'primary',
+                                default => 'gray',
+                            }),
+                        Infolists\Components\TextEntry::make('description')->columnSpanFull()->html(),
+                        Infolists\Components\TextEntry::make('published')
+                            ->badge()
+                            ->color(fn (bool $state): string => $state ? 'success' : 'danger')
+                            ->formatStateUsing(fn (bool $state): string => $state ? 'Published' : 'Unpublished'),
+                        Infolists\Components\TextEntry::make('visibility_in_catalog')
+                            ->badge()
+                            ->color(fn (string $state): string => match ($state) {
+                                'visible' => 'success',
+                                'catalog' => 'warning',
+                                'search' => 'info',
+                                'hidden' => 'danger',
+                                default => 'gray',
+                            }),
+                    ]),
+                
+                // Pricing Section
+                Infolists\Components\Section::make('Pricing')
+                    ->columns(4)
+                    ->schema([
+                        Infolists\Components\TextEntry::make('origen_price')->label('Origin Price')->money('EUR'),
+                        Infolists\Components\TextEntry::make('transporte')->label('Transport Cost')->money('EUR'),
+                        Infolists\Components\TextEntry::make('cost_price')->label('Cost Price')->money('EUR'),
+                        Infolists\Components\TextEntry::make('minimum_price')->label('Minimum Price')->money('EUR'),
+                        Infolists\Components\TextEntry::make('regular_price')->label('Regular Price')->money('EUR'),
+                        Infolists\Components\TextEntry::make('beneficio_web')->label('Web Profit')->money('EUR'),
+                        Infolists\Components\TextEntry::make('beneficio_glovo')->label('Glovo Profit')->money('EUR'),
+                    ]),
+                
+                // Inventory & Shipping Section
+                Infolists\Components\Section::make('Inventory & Shipping')
+                    ->columns(3)
+                    ->schema([
+                        Infolists\Components\TextEntry::make('stock')
+                            ->badge()
+                            ->color(fn (int $state): string => $state < 5 ? 'danger' : 'success'),
+                        Infolists\Components\TextEntry::make('warehouseLocation.aisle')->label('Warehouse Location'),
+                        Infolists\Components\TextEntry::make('item_size')->label('Size'),
+                        Infolists\Components\TextEntry::make('gtin')->label('GTIN (Barcode)'),
+                    ]),
+                
+                // Categories & Attributes Section
+                Infolists\Components\Section::make('Categories & Attributes')
+                    ->columns(3)
+                    ->schema([
+                        Infolists\Components\TextEntry::make('categories'),
+                        Infolists\Components\TextEntry::make('supercategories')->label('Super Categories'),
                         Infolists\Components\TextEntry::make('brand.name')->label('Brand'),
+                        Infolists\Components\TextEntry::make('collection'),
+                        Infolists\Components\TextEntry::make('color'),
+                        Infolists\Components\TextEntry::make('variant_attribute_1')->label('Variant Attribute'),
+                        Infolists\Components\TextEntry::make('publico_objetivo')->label('Target Audience'),
+                    ]),
+                
+                // Media Section
+                Infolists\Components\Section::make('Media')
+                    ->schema([
+                        Infolists\Components\TextEntry::make('images')
+                            ->label('Additional Images')
+                            ->columnSpanFull()
+                            ->formatStateUsing(function ($state) {
+                                if (empty($state)) return 'No additional images';
+                                
+                                $images = is_array($state) ? $state : json_decode($state, true);
+                                if (empty($images)) return 'No additional images';
+                                
+                                $html = '<div class="grid grid-cols-4 gap-2 mt-2">';
+                                foreach ($images as $image) {
+                                    $imageUrl = filter_var($image, FILTER_VALIDATE_URL) 
+                                        ? $image 
+                                        : (\Storage::url($image) ?? $image);
+                                    $html .= '<img src="' . $imageUrl . '" class="w-full h-20 object-cover rounded border" onerror="this.style.display=\'none\'">';
+                                }
+                                $html .= '</div>';
+                                
+                                return $html;
+                            })
+                            ->html(),
+                    ]),
+                
+                // SEO Section
+                Infolists\Components\Section::make('SEO Information')
+                    ->columns(2)
+                    ->schema([
+                        Infolists\Components\TextEntry::make('meta_title')->label('Meta Title')->columnSpanFull(),
+                        Infolists\Components\TextEntry::make('meta_description')->label('Meta Description')->columnSpanFull(),
+                    ]),
+                
+                // Advanced Information Section
+                Infolists\Components\Section::make('Advanced Information')
+                    ->columns(3)
+                    ->schema([
+                        Infolists\Components\TextEntry::make('rfid_code')->label('RFID Code')->badge()->color('primary'),
                         Infolists\Components\TextEntry::make('supplier.name')->label('Supplier'),
-                        Infolists\Components\TextEntry::make('condicion')->label('Condition'),
+                        Infolists\Components\TextEntry::make('marca')->label('Brand (Legacy)'),
+                        Infolists\Components\TextEntry::make('proveedor')->label('Supplier (Legacy)'),
+                        Infolists\Components\TextEntry::make('funciones')->label('Features')->columnSpanFull(),
+                        Infolists\Components\TextEntry::make('condicion')->label('Condition')
+                            ->badge()
+                            ->color(fn (string $state): string => match ($state) {
+                                'new' => 'success',
+                                'used' => 'warning',
+                                'refurbished' => 'info',
+                                default => 'gray',
+                            }),
+                        Infolists\Components\TextEntry::make('informacion_adicional')->label('Additional Information')->columnSpanFull(),
+                    ]),
+                
+                // Timestamps
+                Infolists\Components\Section::make('System Information')
+                    ->columns(2)
+                    ->schema([
+                        Infolists\Components\TextEntry::make('created_at')->label('Created At')->dateTime(),
+                        Infolists\Components\TextEntry::make('updated_at')->label('Updated At')->dateTime(),
                     ]),
             ]);
     }
@@ -278,5 +568,10 @@ class ProductResource extends Resource
             'create' => Pages\CreateProduct::route('/create'),
             'edit' => Pages\EditProduct::route('/{record}/edit'),
         ];
+    }
+    
+    public static function getNavigationBadge(): ?string
+    {
+        return static::getModel()::count();
     }
 }
