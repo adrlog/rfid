@@ -86,7 +86,7 @@ class Product extends Model
     protected static function booted(): void
     {
         static::saving(function (Product $product) {
-            // Handle main image upload
+            // Handle main image upload (unchanged)
             if (request()->hasFile('product_picture_upload')) {
                 // Delete old image if exists and it's a file (not URL)
                 if ($product->product_picture && !filter_var($product->product_picture, FILTER_VALIDATE_URL)) {
@@ -97,7 +97,7 @@ class Product extends Model
                 $product->product_picture = $path;
             }
             
-            // Handle additional images upload
+            // Handle additional images upload (unchanged)
             if (request()->hasFile('images_upload')) {
                 $uploadedImages = [];
                 
@@ -118,37 +118,18 @@ class Product extends Model
                 $product->images = json_encode(array_merge($existingImages, $uploadedImages));
             }
             
-            // Handle textarea URLs for additional images
+            // UPDATED: Handle textarea URLs for additional images (comma-separated)
             if (request()->filled('images')) {
                 $urls = array_filter(
-                    array_map('trim', explode("\n", request()->input('images'))),
+                    array_map('trim', explode(',', request()->input('images'))),
                     function($url) {
                         return filter_var($url, FILTER_VALIDATE_URL);
                     }
                 );
                 
-                // If we have URLs from textarea, use them instead of uploaded files
+                // If we have URLs from textarea, use them (overwrite uploaded files)
                 if (!empty($urls)) {
                     $product->images = json_encode($urls);
-                }
-            }
-        });
-        
-        static::deleting(function (Product $product) {
-            // Delete uploaded files when product is deleted
-            if ($product->product_picture && !filter_var($product->product_picture, FILTER_VALIDATE_URL)) {
-                Storage::delete($product->product_picture);
-            }
-            
-            if ($product->images) {
-                $images = is_array($product->images) 
-                    ? $product->images 
-                    : json_decode($product->images, true) ?? [];
-                
-                foreach ($images as $image) {
-                    if (!filter_var($image, FILTER_VALIDATE_URL)) {
-                        Storage::delete($image);
-                    }
                 }
             }
         });

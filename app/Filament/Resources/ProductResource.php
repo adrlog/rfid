@@ -206,13 +206,13 @@ class ProductResource extends Resource
                                 // Additional Images - URLs or Uploads with PREVIEW
                                 Forms\Components\Group::make([
                                     Forms\Components\Textarea::make('images')
-                                        ->label('Additional Image URLs (one per line)')
-                                        ->helperText('Enter one URL per line for additional product images')
+                                        ->label('Additional Image URLs (comma-separated)')
+                                        ->helperText('Enter image URLs separated by commas')
                                         ->columnSpanFull()
                                         ->live(debounce: 500)
                                         ->afterStateUpdated(function ($state, Forms\Set $set) {
                                             $urls = array_filter(
-                                                array_map('trim', explode("\n", $state)),
+                                                array_map('trim', explode(',', $state)),
                                                 function($url) {
                                                     return filter_var($url, FILTER_VALIDATE_URL);
                                                 }
@@ -241,9 +241,9 @@ class ProductResource extends Resource
                                             $set('_additional_images_preview', $previews);
                                         }),
                                     
-                                    // ADD THIS PREVIEW COMPONENT
+                                    // Horizontal Scrolling Preview Component
                                     Forms\Components\ViewField::make('_additional_images_preview')
-                                        ->view('filament.forms.components.multi-image-preview')
+                                        ->view('filament.forms.components.horizontal-image-preview')
                                         ->label('Additional Images Preview')
                                         ->columnSpanFull(),
                                 ]),
@@ -302,51 +302,201 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')->searchable()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('sku')->searchable()->sortable()->toggleable(),
+                // Add Image Column for better visual
+                Tables\Columns\ImageColumn::make('product_picture')
+                    ->label('Image')
+                    ->getStateUsing(function ($record) {
+                        if (filter_var($record->product_picture, FILTER_VALIDATE_URL)) {
+                            return $record->product_picture;
+                        }
+                        if ($record->product_picture) {
+                            return Storage::url($record->product_picture);
+                        }
+                        return 'https://ui-avatars.com/api/?name=' . urlencode($record->name) . '&color=FFFFFF&background=111827';
+                    })
+                    ->circular()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 
-                Tables\Columns\TextColumn::make('categories')->badge()->toggleable(),
-                Tables\Columns\TextColumn::make('supercategories')->badge()->toggleable(),
+                Tables\Columns\TextColumn::make('name')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable()
+                    ->limit(50)
+                    ->tooltip(fn ($record) => $record->name),
                 
-                Tables\Columns\TextColumn::make('origen_price')->money()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('transporte')->money()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('cost_price')->money()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('minimum_price')->money()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('regular_price')->money()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('beneficio_web')->money()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('beneficio_glovo')->money()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('sku')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
+                
+                Tables\Columns\TextColumn::make('categories')
+                    ->badge()
+                    ->toggleable()
+                    ->limit(50)
+                    ->tooltip(fn ($record) => $record->categories),
+                
+                Tables\Columns\TextColumn::make('supercategories')
+                    ->badge()
+                    ->toggleable()
+                    ->limit(50)
+                    ->tooltip(fn ($record) => $record->supercategories),
+                
+                Tables\Columns\TextColumn::make('origen_price')
+                    ->money()
+                    ->sortable()
+                    ->toggleable(),
+                
+                Tables\Columns\TextColumn::make('transporte')
+                    ->money()
+                    ->sortable()
+                    ->toggleable(),
+                
+                Tables\Columns\TextColumn::make('cost_price')
+                    ->money()
+                    ->sortable()
+                    ->toggleable(),
+                
+                Tables\Columns\TextColumn::make('minimum_price')
+                    ->money()
+                    ->sortable()
+                    ->toggleable(),
+                
+                Tables\Columns\TextColumn::make('regular_price')
+                    ->money()
+                    ->sortable()
+                    ->toggleable(),
+                
+                Tables\Columns\TextColumn::make('beneficio_web')
+                    ->money()
+                    ->sortable()
+                    ->toggleable(),
+                
+                Tables\Columns\TextColumn::make('beneficio_glovo')
+                    ->money()
+                    ->sortable()
+                    ->toggleable(),
 
-                Tables\Columns\TextColumn::make('type')->sortable()->toggleable(),
-                Tables\Columns\IconColumn::make('published')->boolean()->toggleable(),
-                Tables\Columns\TextColumn::make('visibility_in_catalog')->toggleable(),
+                Tables\Columns\TextColumn::make('type')
+                    ->sortable()
+                    ->toggleable(),
+                
+                Tables\Columns\IconColumn::make('published')
+                    ->boolean()
+                    ->toggleable(),
+                
+                Tables\Columns\TextColumn::make('visibility_in_catalog')
+                    ->toggleable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->visibility_in_catalog),
 
-                Tables\Columns\TextColumn::make('description')->limit(30)->toggleable(),
-                Tables\Columns\TextColumn::make('meta_title')->toggleable(),
-                Tables\Columns\TextColumn::make('meta_description')->toggleable(),
+                Tables\Columns\TextColumn::make('description')
+                    ->limit(50)
+                    ->toggleable()
+                    ->tooltip(fn ($record) => $record->description),
+                
+                Tables\Columns\TextColumn::make('meta_title')
+                    ->toggleable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->meta_title),
+                
+                Tables\Columns\TextColumn::make('meta_description')
+                    ->toggleable()
+                    ->limit(50)
+                    ->tooltip(fn ($record) => $record->meta_description),
 
-
-                Tables\Columns\TextColumn::make('images')->toggleable(),
+                Tables\Columns\TextColumn::make('images')
+                    ->toggleable()
+                    ->limit(50)
+                    ->tooltip(fn ($record) => $record->images),
+                
                 Tables\Columns\TextColumn::make('stock')
                     ->sortable()
                     ->color(fn (int $state) => $state < 5 ? 'danger' : 'success')
                     ->toggleable(),
 
-                Tables\Columns\TextColumn::make('gtin')->toggleable(),
-                Tables\Columns\TextColumn::make('collection')->toggleable(),
-                Tables\Columns\TextColumn::make('variant_attribute_1')->toggleable(),
-                Tables\Columns\TextColumn::make('color')->toggleable(),
-                Tables\Columns\TextColumn::make('marca')->toggleable(),
-                Tables\Columns\TextColumn::make('item_size')->toggleable(),
-                Tables\Columns\TextColumn::make('publico_objetivo')->toggleable(),
-                Tables\Columns\TextColumn::make('funciones')->toggleable(),
-                Tables\Columns\TextColumn::make('proveedor')->toggleable(),
-                Tables\Columns\TextColumn::make('condicion')->toggleable(),
-                Tables\Columns\TextColumn::make('informacion_adicional')->limit(30)->toggleable(),
-                Tables\Columns\TextColumn::make('rfid_code')->label('RFID')->searchable()->copyable()->toggleable(),
+                Tables\Columns\TextColumn::make('gtin')
+                    ->toggleable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->gtin),
+                
+                Tables\Columns\TextColumn::make('collection')
+                    ->toggleable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->collection),
+                
+                Tables\Columns\TextColumn::make('variant_attribute_1')
+                    ->toggleable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->variant_attribute_1),
+                
+                Tables\Columns\TextColumn::make('color')
+                    ->toggleable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->color),
+                
+                Tables\Columns\TextColumn::make('marca')
+                    ->toggleable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->marca),
+                
+                Tables\Columns\TextColumn::make('item_size')
+                    ->toggleable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->item_size),
+                
+                Tables\Columns\TextColumn::make('publico_objetivo')
+                    ->toggleable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->publico_objetivo),
+                
+                Tables\Columns\TextColumn::make('funciones')
+                    ->toggleable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->funciones),
+                
+                Tables\Columns\TextColumn::make('proveedor')
+                    ->toggleable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->proveedor),
+                
+                Tables\Columns\TextColumn::make('condicion')
+                    ->toggleable()
+                    ->limit(50)
+                    ->tooltip(fn ($record) => $record->condicion),
+                
+                Tables\Columns\TextColumn::make('informacion_adicional')
+                    ->limit(50)
+                    ->toggleable()
+                    ->tooltip(fn ($record) => $record->informacion_adicional),
+                
+                Tables\Columns\TextColumn::make('rfid_code')
+                    ->label('RFID')
+                    ->searchable()
+                    ->copyable()
+                    ->toggleable()
+                    ->limit(30)
+                    ->tooltip(fn ($record) => $record->rfid_code),
 
-                Tables\Columns\TextColumn::make('brand.name')->label('Brand')->sortable()->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('supplier.name')->label('Supplier')->sortable()->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('warehouseLocation.aisle')->label('Warehouse Location')->sortable()->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('brand.name')
+                    ->label('Brand')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->limit(20)
+                    ->tooltip(fn ($record) => $record->brand?->name),
+                
+                Tables\Columns\TextColumn::make('supplier.name')
+                    ->label('Supplier')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->limit(20)
+                    ->tooltip(fn ($record) => $record->supplier?->name),
+                
+                Tables\Columns\TextColumn::make('warehouseLocation.aisle')
+                    ->label('Warehouse Location')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->limit(20)
+                    ->tooltip(fn ($record) => $record->warehouseLocation?->aisle),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('categories')
@@ -358,7 +508,6 @@ class ProductResource extends Resource
                         ->pluck('categories', 'categories')
                         ->toArray()
                     ),
-
                 Tables\Filters\SelectFilter::make('supercategories')
                     ->label('Super Category')
                     ->options(fn () => \App\Models\Product::query()
@@ -414,7 +563,8 @@ class ProductResource extends Resource
             ])
             ->headerActions([
                 Tables\Actions\ImportAction::make()->importer(ProductImporter::class)
-            ]);
+            ])
+            ->defaultSort('created_at', 'desc');
     }
 
     public static function infolist(Infolist $infolist): Infolist

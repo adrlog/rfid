@@ -1,7 +1,10 @@
 <div>
     @if ($getState() && count($getState()) > 0)
         <div class="mt-4 p-4 border rounded-lg bg-gray-50 dark:bg-gray-900">
-            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Additional Images Preview ({{ count($getState()) }}):</p>
+            <p class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Additional Images Preview ({{ count($getState()) }}):
+                <span class="text-xs text-gray-500 ml-2">Comma-separated URLs</span>
+            </p>
             <div class="grid grid-cols-4 gap-2">
                 @foreach ($getState() as $imageUrl)
                     <div class="relative group">
@@ -17,11 +20,14 @@
                     </div>
                 @endforeach
             </div>
+            <div class="mt-2 text-xs text-gray-500">
+                <p>URLs will be saved as: {{ implode(', ', array_slice($getState(), 0, 3)) }}{{ count($getState()) > 3 ? ', ...' : '' }}</p>
+            </div>
         </div>
     @else
         <div class="mt-4 p-4 border border-dashed rounded-lg text-center text-gray-500 dark:text-gray-400">
             <p class="text-sm">No additional images preview available</p>
-            <p class="text-xs">Enter URLs (one per line) or upload images to see preview</p>
+            <p class="text-xs">Enter URLs (comma-separated) or upload images to see preview</p>
         </div>
     @endif
 </div>
