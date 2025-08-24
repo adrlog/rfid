@@ -39,7 +39,6 @@ class ProductResource extends Resource
                                     
                                 Forms\Components\TextInput::make('sku')
                                     ->label('SKU')
-                                    ->unique(ignoreRecord: true)
                                     ->maxLength(255)
                                     ->required(),
                                     
@@ -73,44 +72,36 @@ class ProductResource extends Resource
                             ->schema([
                                 Forms\Components\TextInput::make('origen_price')
                                     ->label('Origin Price')
-                                    ->numeric()
                                     ->prefix('€'),
                                     
                                 Forms\Components\TextInput::make('transporte')
                                     ->label('Transport Cost')
-                                    ->numeric()
                                     ->prefix('€'),
                                     
                                 Forms\Components\TextInput::make('cost_price')
                                     ->label('Cost Price')
-                                    ->numeric()
                                     ->prefix('€'),
                                     
                                 Forms\Components\TextInput::make('minimum_price')
                                     ->label('Minimum Price')
-                                    ->numeric()
                                     ->prefix('€'),
                                     
                                 Forms\Components\TextInput::make('regular_price')
                                     ->label('Regular Price')
-                                    ->numeric()
                                     ->prefix('€'),
                                     
                                 Forms\Components\TextInput::make('beneficio_web')
                                     ->label('Web Profit')
-                                    ->numeric()
                                     ->prefix('€'),
                                     
                                 Forms\Components\TextInput::make('beneficio_glovo')
                                     ->label('Glovo Profit')
-                                    ->numeric()
                                     ->prefix('€'),
                             ])->columns(2),
                             
                         Forms\Components\Tabs\Tab::make('Inventory & Shipping')
                             ->schema([
                                 Forms\Components\TextInput::make('stock')
-                                    ->numeric()
                                     ->default(0),
                                     
                                 Forms\Components\Select::make('warehouse_location_id')
@@ -162,61 +153,41 @@ class ProductResource extends Resource
                             
                         Forms\Components\Tabs\Tab::make('Media')
                             ->schema([
-                                // Main Image - URL or Upload with PREVIEW
-                                Forms\Components\Group::make([
-                                    Forms\Components\TextInput::make('product_picture')
-                                        ->label('Main Image URL')
-                                        ->url()
-                                        ->columnSpanFull()
-                                        ->helperText('Enter a URL for the main product image')
-                                        ->live(debounce: 500)
-                                        ->afterStateUpdated(function ($state, Forms\Set $set) {
-                                            if (filter_var($state, FILTER_VALIDATE_URL)) {
-                                                $set('_main_image_preview', $state);
-                                            } else {
-                                                $set('_main_image_preview', null);
-                                            }
-                                        }),
-                                        
-                                    Forms\Components\FileUpload::make('product_picture_upload')
-                                        ->label('Or Upload Main Image')
-                                        ->image()
-                                        ->directory('products')
-                                        ->visibility('public')
-                                        ->preserveFilenames()
-                                        ->maxSize(2048)
-                                        ->columnSpanFull()
-                                        ->dehydrated(false)
-                                        ->live()
-                                        ->afterStateUpdated(function ($state, Forms\Set $set) {
-                                            if ($state) {
-                                                $set('_main_image_preview', $state->temporaryUrl());
-                                            } else {
-                                                $set('_main_image_preview', null);
-                                            }
-                                        }),
-                                    
-                                    // ADD THIS PREVIEW COMPONENT
-                                    Forms\Components\ViewField::make('_main_image_preview')
-                                        ->view('filament.forms.components.image-preview')
-                                        ->label('Main Image Preview')
-                                        ->columnSpanFull(),
-                                ]),
                                 
-                                // Additional Images - URLs or Uploads with PREVIEW
                                 Forms\Components\Group::make([
                                     Forms\Components\Textarea::make('images')
-                                        ->label('Additional Image URLs (comma-separated)')
+                                        ->label('Image URLs (comma-separated)')
                                         ->helperText('Enter image URLs separated by commas')
                                         ->columnSpanFull()
+                                        ->default(function ($record) {
+                                            // Pre-fill with existing URLs when editing
+                                            if ($record && $record->images) {
+                                                // Handle both single string and comma-separated strings
+                                                if (is_array($record->images)) {
+                                                    return implode(', ', $record->images);
+                                                } else if (strpos($record->images, ',') !== false) {
+                                                    // Already comma-separated, return as is
+                                                    return $record->images;
+                                                } else {
+                                                    // Single image, return as is
+                                                    return $record->images;
+                                                }
+                                            }
+                                            return '';
+                                        })
                                         ->live(debounce: 500)
                                         ->afterStateUpdated(function ($state, Forms\Set $set) {
-                                            $urls = array_filter(
-                                                array_map('trim', explode(',', $state)),
-                                                function($url) {
-                                                    return filter_var($url, FILTER_VALIDATE_URL);
-                                                }
-                                            );
+                                            // Handle both single URL and comma-separated URLs
+                                            if (strpos($state, ',') !== false) {
+                                                $urls = array_filter(
+                                                    array_map('trim', explode(',', $state)),
+                                                    function($url) {
+                                                        return !empty($url);
+                                                    }
+                                                );
+                                            } else {
+                                                $urls = !empty(trim($state)) ? [trim($state)] : [];
+                                            }
                                             $set('_additional_images_preview', $urls);
                                         }),
                                         
@@ -245,6 +216,22 @@ class ProductResource extends Resource
                                     Forms\Components\ViewField::make('_additional_images_preview')
                                         ->view('filament.forms.components.horizontal-image-preview')
                                         ->label('Additional Images Preview')
+                                        ->default(function ($record) {
+                                            // Initialize with existing images when editing
+                                            if ($record && $record->images) {
+                                                // Handle both single string and comma-separated strings
+                                                if (is_array($record->images)) {
+                                                    return $record->images;
+                                                } else if (strpos($record->images, ',') !== false) {
+                                                    // Comma-separated string
+                                                    return array_filter(array_map('trim', explode(',', $record->images)));
+                                                } else {
+                                                    // Single image string
+                                                    return [$record->images];
+                                                }
+                                            }
+                                            return [];
+                                        })
                                         ->columnSpanFull(),
                                 ]),
                             ]),

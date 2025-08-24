@@ -97,7 +97,7 @@ class Product extends Model
                 $product->product_picture = $path;
             }
             
-            // Handle additional images upload (unchanged)
+            // Handle additional images upload
             if (request()->hasFile('images_upload')) {
                 $uploadedImages = [];
                 
@@ -107,29 +107,29 @@ class Product extends Model
                     $uploadedImages[] = $path;
                 }
                 
-                // Merge with existing images if any
-                $existingImages = [];
-                if ($product->images) {
-                    $existingImages = is_array($product->images) 
-                        ? $product->images 
-                        : json_decode($product->images, true) ?? [];
-                }
-                
-                $product->images = json_encode(array_merge($existingImages, $uploadedImages));
+                // Use only uploaded images (replace existing)
+                $product->images = implode(',', $uploadedImages);
             }
             
-            // UPDATED: Handle textarea URLs for additional images (comma-separated)
+            // Handle textarea URLs for additional images (comma-separated)
             if (request()->filled('images')) {
-                $urls = array_filter(
-                    array_map('trim', explode(',', request()->input('images'))),
-                    function($url) {
-                        return filter_var($url, FILTER_VALIDATE_URL);
-                    }
-                );
+                $input = request()->input('images');
                 
-                // If we have URLs from textarea, use them (overwrite uploaded files)
+                // Handle both single URL and comma-separated URLs
+                if (strpos($input, ',') !== false) {
+                    $urls = array_filter(
+                        array_map('trim', explode(',', $input)),
+                        function($url) {
+                            return !empty($url);
+                        }
+                    );
+                } else {
+                    $urls = !empty(trim($input)) ? [trim($input)] : [];
+                }
+                
+                // If we have URLs from textarea, use them
                 if (!empty($urls)) {
-                    $product->images = json_encode($urls);
+                    $product->images = implode(',', $urls);
                 }
             }
         });
