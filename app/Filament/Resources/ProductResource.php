@@ -290,15 +290,22 @@ class ProductResource extends Resource
         return $table
             ->columns([
                 // Add Image Column for better visual
-                Tables\Columns\ImageColumn::make('product_picture')
+                Tables\Columns\ImageColumn::make('images')
                     ->label('Image')
                     ->getStateUsing(function ($record) {
-                        if (filter_var($record->product_picture, FILTER_VALIDATE_URL)) {
-                            return $record->product_picture;
+                        if ($record->images) {
+                            $imagesArray = array_filter(array_map('trim', explode(',', $record->images)));
+                            $firstImage = !empty($imagesArray) ? trim($imagesArray[0]) : null;
+                            if ($firstImage && filter_var($firstImage, FILTER_VALIDATE_URL)) {
+                                return $firstImage;
+                            }
+                            
+                            if ($firstImage) {
+                                return Storage::url($firstImage);
+                            }
                         }
-                        if ($record->product_picture) {
-                            return Storage::url($record->product_picture);
-                        }
+                        
+                        // Fallback to default avatar if no images
                         return 'https://ui-avatars.com/api/?name=' . urlencode($record->name) . '&color=FFFFFF&background=111827';
                     })
                     ->circular()
@@ -313,7 +320,9 @@ class ProductResource extends Resource
                 
                 Tables\Columns\TextColumn::make('sku')
                     ->searchable()
-                    ->sortable()
+                    ->sortable(query: function (Builder $query, string $direction): Builder {
+                        return $query->orderByRaw('CAST(sku AS UNSIGNED) ' . $direction);
+                    })
                     ->toggleable(),
                 
                 Tables\Columns\TextColumn::make('categories')
@@ -390,11 +399,6 @@ class ProductResource extends Resource
                     ->toggleable()
                     ->limit(50)
                     ->tooltip(fn ($record) => $record->meta_description),
-
-                Tables\Columns\TextColumn::make('images')
-                    ->toggleable()
-                    ->limit(50)
-                    ->tooltip(fn ($record) => $record->images),
                 
                 Tables\Columns\TextColumn::make('stock')
                     ->sortable()
