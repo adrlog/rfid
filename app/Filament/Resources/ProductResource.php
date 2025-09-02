@@ -309,7 +309,7 @@ class ProductResource extends Resource
                         return 'https://ui-avatars.com/api/?name=' . urlencode($record->name) . '&color=FFFFFF&background=111827';
                     })
                     ->circular()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->toggleable(),
                 
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
