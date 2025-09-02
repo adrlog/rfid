@@ -80,12 +80,9 @@ class ProductImporter extends Importer
 
     public function resolveRecord(): ?Product
     {
-        // return Product::firstOrNew([
-        //     // Update existing records, matching them by `$this->data['column_name']`
-        //     'email' => $this->data['email'],
-        // ]);
-
-        return new Product();
+        return Product::firstOrNew([
+            'sku' => $this->data['sku'],
+        ]);
     }
 
     public static function getCompletedNotificationBody(Import $import): string
