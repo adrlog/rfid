@@ -184,4 +184,10 @@ class Product extends Model
         
         return 'https://ui-avatars.com/api/?name='.urlencode($this->name).'&color=FFFFFF&background=111827';
     }
+
+    public function getCleanPriceAttribute(): float
+    {
+        return floatval(str_replace(['€', ','], ['', '.'], $this->regular_price));
+    }
+
 }

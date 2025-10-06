@@ -63,6 +63,12 @@ class WarehouseLocationResource extends Resource
             ->actions([
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\Action::make('details')
+                    ->label('Detalles')
+                    ->icon('heroicon-o-eye')
+                    ->color('primary')
+                    ->url(fn($record) => static::getUrl('details', ['record' => $record]))
+                    ->openUrlInNewTab(false),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
@@ -98,6 +104,7 @@ class WarehouseLocationResource extends Resource
             'index' => Pages\ListWarehouseLocations::route('/'),
             'create' => Pages\CreateWarehouseLocation::route('/create'),
             'edit' => Pages\EditWarehouseLocation::route('/{record}/edit'),
+            'details' => Pages\WarehouseLocationDetails::route('/{record}/details'),
         ];
     }
 }

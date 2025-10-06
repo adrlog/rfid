@@ -22,4 +22,9 @@ class WarehouseLocation extends Model
     {
         return $this->hasMany(Product::class);
     }
+
+    public function relations(): HasMany
+    {
+        return $this->hasMany(Relation::class, 'id_wherehouse');
+    }
 }
