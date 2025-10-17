@@ -5,6 +5,10 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Log;
 use App\Events\RfidProductScanned;
 use App\Models\Product;
+use App\Http\Controllers\Api\SaleHistoryController;
+
+Route::get('/ventas', [SaleHistoryController::class, 'index']);
+Route::post('/ventas', [SaleHistoryController::class, 'store']);
 
 Route::post('/rfid', function (Request $request) {
     $tag = $request->input('tag');
